@@ -33,7 +33,7 @@ playerX = 370
 playerY = 480
 moveLeft = False
 moveRight = False
-health = 100
+health = int(100)
 score = 0
 playerSpeed = 0.2
 levelUpRequirement = 20
@@ -61,10 +61,9 @@ aliens = []
 alienSpeed = 0.1
 
 def spawn(): 
-    if len(aliens) < 999999:
-        x = random.randint(100, 700)
-        y = random.randint(50, 150)
-        aliens.append({"x": x, "y": y})
+    x = random.randint(100, 700)
+    y = 10
+    aliens.append({"x": x, "y": y})
 
 SPAWN_ALIEN_EVENT = pygame.USEREVENT + 1
 alienSpawnTime = 2000.0
@@ -79,21 +78,23 @@ def collision(bulletX, bulletY, alienX, alienY):
     alienRect = alienImg.get_rect()
     alienRect.x = alienX
     alienRect.y = alienY
-    
     return bulletRect.colliderect(alienRect)
 
 
 # Level Up
 level = 1
 leveledUp = False
+levelUpRequirement = 20
+levelUpIncrement = 10
 def levelUp():
-    global alienSpeed, leveledUp, level, alienSpawnTime, levelUpText, levelUpSurface, playerSpeed
+    global alienSpeed, leveledUp, level, alienSpawnTime, levelUpText, levelUpSurface, playerSpeed, levelUpRequirement
     alienSpeed += 0.005
     alienSpawnTime *= 0.9
     playerSpeed += 0.02
     pygame.time.set_timer(SPAWN_ALIEN_EVENT, int(alienSpawnTime))
-    leveledUp = True;
+    leveledUp = True
     level += 1
+    levelUpRequirement += levelUpIncrement
     levelUpSound.play()
     
 
@@ -111,12 +112,33 @@ while running:
 
     levelUpText = "Level: " + str(level)
     levelUpSurface = font.render(levelUpText, True, (255, 255, 255))
-    screen.blit(levelUpSurface, (670, 10))
+    screen.blit(levelUpSurface, (660, 10))
 
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            pygame.quit()
+
+        # Pause
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                paused = True
+                while paused:
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_ESCAPE:
+                                paused = False
+                        if event.type == pygame.QUIT:
+                            running = False
+                            pygame.quit()
+
+                    screen.fill((0, 0, 0))
+                    pauseSurface = font.render("Paused", True, (255, 255, 255))
+                    pauseRect = pauseSurface.get_rect()
+                    pauseRect.center = screen.get_rect().center
+                    screen.blit(pauseSurface, pauseRect)
+                    pygame.display.update()
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
@@ -141,9 +163,9 @@ while running:
     if moveRight:
         playerX += playerSpeed
 
-    if score != 0 and score % 20 == 0 and leveledUp == False:
+    if score != 0 and score >= levelUpRequirement and leveledUp == False:
         levelUp()
-    if score % 20 != 0:
+    if score % levelUpRequirement != 0:
         leveledUp = False
 
     # Update bullet positions
@@ -168,6 +190,7 @@ while running:
                 bullets.remove(bullet)
                 aliens.remove(alien)
                 score += 10
+                explosionSound.play()
         
         # Check Invasion
         if alien["y"] >= 480:
@@ -175,8 +198,29 @@ while running:
             aliens.remove(alien)
             hitSound.play()
 
-
     player(playerX, playerY)
+
+    if health <= 0:
+        running = False
+
     pygame.display.update()
+
+running = True
+while running:
+    pygame.mixer.music.stop()
+    healthText = "Health: " + str(health)
+    healthSurface = font.render(healthText, True, (255, 255, 255))
+    screen.blit(healthSurface, (10, 10))
+    font2 = pygame.font.Font("space_invaders.ttf", 36)
+    gameOverText = "GAME OVER"
+    gameOverSurface = font2.render(gameOverText, True, (255, 0, 0))
+    screen.blit(gameOverSurface, (280, 250))
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    pygame.display.update()
+    
 
 pygame.quit()
